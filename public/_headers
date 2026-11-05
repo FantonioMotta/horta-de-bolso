@@ -1,0 +1,19 @@
+# Cabeçalhos do Cloudflare Pages.
+# O service worker e o HTML precisam ser revalidados a cada deploy.
+/sw.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Os arquivos em /assets/ têm hash no nome, então podem ficar em cache longo.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(), microphone=(), camera=()

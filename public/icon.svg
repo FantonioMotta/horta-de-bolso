@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fc5da" />
+      <stop offset="0.62" stop-color="#d8ecdf" />
+      <stop offset="1" stop-color="#f4efdf" />
+    </linearGradient>
+    <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d5a3c" />
+      <stop offset="1" stop-color="#4c3524" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#sky)" />
+  <circle cx="360" cy="140" r="54" fill="#f6e6b8" opacity="0.85" />
+  <path d="M0 360c80-40 150-18 220-30 70-12 140-38 292 10v172H0Z" fill="#9dc4a4" />
+  <path d="M0 402c92-26 160-4 244-16 76-10 150-4 268 16v110H0Z" fill="#67996f" />
+  <path d="M76 512v-92c0-22 18-40 40-40h20c22 0 40 18 40 40v92Z" fill="#5b3f2b" />
+  <path d="M76 512v-92c0-22 18-40 40-40h20c22 0 40 18 40 40v92Z" fill="#6d4c33" opacity="0.5" />
+  <g fill="none" stroke="#3f7a4f" stroke-linecap="round">
+    <path d="M300 468c-6-48-2-86 10-120" stroke-width="12" />
+    <path d="M312 400c-26-6-38-24-38-44 24-2 40 12 44 34" stroke-width="10" fill="#6fae74" stroke="none" />
+    <path d="M316 372c22-10 34-28 32-48-24 0-38 16-40 38" stroke-width="10" fill="#82bd80" stroke="none" />
+  </g>
+  <circle cx="316" cy="336" r="26" fill="#e8744f" />
+  <circle cx="308" cy="328" r="8" fill="#f6b39a" opacity="0.8" />
+  <circle cx="148" cy="446" r="14" fill="#f3d98a" />
+  <circle cx="196" cy="470" r="10" fill="#f3d98a" opacity="0.8" />
+</svg>
