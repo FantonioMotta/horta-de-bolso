@@ -1,4 +1,4 @@
-/* Service worker mínimo para o Orta funcionar instalado e offline. */
+/* Service worker mínimo para o Horta de Bolso funcionar instalado e offline. */
 const CACHE = 'orta-v1';
 
 self.addEventListener('install', (event) => {

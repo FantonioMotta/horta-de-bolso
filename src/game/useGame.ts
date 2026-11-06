@@ -272,7 +272,7 @@ export function useGame() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `orta-save-${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = `horta-de-bolso-save-${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -286,7 +286,7 @@ export function useGame() {
       const imported = decodeSave(text);
       if (!imported) {
         audio.play('error');
-        toast('Esse arquivo não é um save válido do Orta.', 'bad');
+        toast('Esse arquivo não é um save válido do Horta de Bolso.', 'bad');
         return false;
       }
 

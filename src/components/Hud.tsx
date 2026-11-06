@@ -85,7 +85,7 @@ export function Hud({
             </button>
           </div>
           <p>
-            Orta · {mood.label} · {time}
+            Horta de Bolso · {mood.label} · {time}
           </p>
         </div>
       </div>

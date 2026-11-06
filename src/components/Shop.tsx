@@ -70,7 +70,7 @@ export function Shop({
     setSaveError('');
     if (file.size > 2_000_000) {
       setPendingSave(null);
-      setSaveError('Esse arquivo é grande demais para ser um save do Orta.');
+      setSaveError('Esse arquivo é grande demais para ser um save do Horta de Bolso.');
       return;
     }
 
@@ -84,7 +84,7 @@ export function Shop({
       const imported = decodeSave(text);
       if (!imported) {
         setPendingSave(null);
-        setSaveError('Esse arquivo não é um save válido do Orta.');
+        setSaveError('Esse arquivo não é um save válido do Horta de Bolso.');
         return;
       }
       setPendingSave({

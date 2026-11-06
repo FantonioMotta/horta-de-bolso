@@ -44,11 +44,11 @@ npm run preview
 
 ## Instalar como aplicativo (PWA)
 
-A build de produção inclui `manifest.webmanifest` e um service worker (`sw.js`), então o Orta funciona instalado e também offline depois da primeira visita.
+A build de produção inclui `manifest.webmanifest` e um service worker (`sw.js`), então o Horta de Bolso funciona instalado e também offline depois da primeira visita.
 
 1. Rode `npm run build` e `npm run preview`.
 2. Abra o endereço mostrado pelo preview no Chrome ou Edge.
-3. Use o ícone de instalação na barra de endereço (ou o menu do navegador → “Instalar Orta”).
+3. Use o ícone de instalação na barra de endereço (ou o menu do navegador → “Instalar Horta de Bolso”).
 
 O manifesto usa `display: "window"`, então o app abre em uma janela normal do sistema, com moldura, e não em modo standalone sem bordas. O service worker guarda o app em cache; o progresso fica no `localStorage` do navegador.
 
@@ -110,7 +110,7 @@ A caderneta mantém até 3 pedidos ativos. Cada pedido pede uma quantidade de um
 - Ao voltar, o tempo fora do jogo é aplicado ao crescimento e à umidade, e um resumo mostra o que amadureceu, o que ainda está crescendo, o que ficou com sede e o que aconteceu com os pedidos.
 - O relógio do jogo usa o horário real do sistema para o ciclo de dia e noite.
 - Limpar os dados do site apaga a horta; não há conta nem servidor.
-- **Exportar save** baixa um arquivo `orta-save-AAAA-MM-DD.json` com uma fotografia do progresso. **Importar save** valida o arquivo, pede confirmação e substitui a horta atual. O backup também aceita um save antigo `v: 1`.
+- **Exportar save** baixa um arquivo `horta-de-bolso-save-AAAA-MM-DD.json` com uma fotografia do progresso. **Importar save** valida o arquivo, pede confirmação e substitui a horta atual. O backup também aceita um save antigo `v: 1`.
 - O arquivo importado não aplica o tempo em que ficou guardado: plantas, moedas, sacola e pedidos voltam como estavam no momento da exportação. Pedidos já vencidos são descartados.
 - Ao importar, o progresso é gravado imediatamente no navegador atual.
 

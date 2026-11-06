@@ -1,6 +1,6 @@
 {
-  "name": "Orta — sua horta de bolso",
-  "short_name": "Orta",
+  "name": "Horta de Bolso — sua horta no canto da tela",
+  "short_name": "Horta de Bolso",
   "description": "Uma horta tranquila que cresce enquanto você faz outras coisas.",
   "lang": "pt-BR",
   "start_url": "./",
