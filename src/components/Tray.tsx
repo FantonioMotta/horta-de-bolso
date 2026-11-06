@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type WheelEvent } from 'react';
 import {
   FERTILIZERS,
   FERTILIZER_ORDER,
@@ -19,6 +20,27 @@ interface TrayProps {
   onOpenShop: () => void;
 }
 
+/** Ferramentas que ocupam o slot da hotbar. Sementes ficam na tira ao lado. */
+type ToolId = 'water' | FertilizerId;
+
+const TOOL_ORDER: ToolId[] = ['water', ...FERTILIZER_ORDER];
+
+function isToolId(value: Tool): value is ToolId {
+  return value === 'water' || value === 'growth' || value === 'retention';
+}
+
+function toolName(id: ToolId): string {
+  return id === 'water' ? 'Regar' : FERTILIZERS[id].name;
+}
+
+function toolHint(id: ToolId): string {
+  return id === 'water' ? 'clique na terra' : 'antes da semente';
+}
+
+function toolKey(id: ToolId): string {
+  return id === 'water' ? 'W' : FERTILIZERS[id].key;
+}
+
 function WateringCan() {
   return (
     <svg className="can" viewBox="0 0 48 40" aria-hidden="true">
@@ -36,6 +58,19 @@ function WateringCan() {
   );
 }
 
+function ToolIcon({ id }: { id: ToolId }) {
+  if (id === 'water') return <WateringCan />;
+  return <FertilizerIcon id={id} className="fert-icon" />;
+}
+
+function ToolArt({ id, className = '' }: { id: ToolId; className?: string }) {
+  return (
+    <span className={`${className}${id === 'water' ? '' : ` tool-art-${id}`}`.trim()}>
+      <ToolIcon id={id} />
+    </span>
+  );
+}
+
 export function Tray({
   unlocked,
   coins,
@@ -45,62 +80,153 @@ export function Tray({
   onSelect,
   onOpenShop,
 }: TrayProps) {
+  const [open, setOpen] = useState(false);
+  const [lastTool, setLastTool] = useState<ToolId>('water');
+  const slotRef = useRef<HTMLDivElement>(null);
+  const activeTool = isToolId(tool) ? tool : null;
+  const shown = activeTool ?? lastTool;
+
+  useEffect(() => {
+    if (activeTool) setLastTool(activeTool);
+  }, [activeTool]);
+
+  // Ao trocar de ferramenta por atalho ou clique, a caixa fecha.
+  useEffect(() => {
+    setOpen(false);
+  }, [tool]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!slotRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      event.currentTarget.scrollLeft += event.deltaY;
+    }
+  };
+
+  const pick = (id: ToolId) => {
+    setOpen(false);
+    if (id !== 'water' && fertilizerStock[id] <= 0) {
+      onOpenShop();
+      return;
+    }
+    onSelect(id);
+  };
+
+  const shownStock = shown === 'water' ? null : fertilizerStock[shown];
+
   return (
     <footer className="tray">
-      <button
-        type="button"
-        className={`tool-card${tool === 'water' ? ' is-active' : ''}`}
-        onClick={() => onSelect('water')}
-        aria-pressed={tool === 'water'}
-        title="Regador (W)"
+      <div className="tool-slot" ref={slotRef}>
+        <button
+          type="button"
+          className={`tool-card tool-current${activeTool ? ' is-active' : ''}${open ? ' is-open' : ''}`}
+          onClick={() => setOpen((current) => !current)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          title={`Ferramentas — ${toolName(shown)} (${toolKey(shown)})`}
+        >
+          <ToolArt id={shown} className="tool-art" />
+          <span className="tool-meta">
+            <span className="tool-name">{toolName(shown)}</span>
+            <span className="tool-hint">
+              {activeTool ? toolHint(shown) : 'toque para escolher'}
+            </span>
+          </span>
+          {shownStock !== null ? (
+            <span
+              className={`tool-count${shownStock > 0 ? '' : ' is-zero'}`}
+              aria-label={`${shownStock} no estoque`}
+            >
+              {shownStock}
+            </span>
+          ) : null}
+          <span className="tool-caret" aria-hidden="true">
+            <svg viewBox="0 0 12 8">
+              <path
+                d="m1 1.5 5 5 5-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        </button>
+
+        {open ? (
+          <div className="tool-menu" role="menu" aria-label="Escolher ferramenta">
+            {TOOL_ORDER.map((id) => {
+              const stock = id === 'water' ? null : fertilizerStock[id];
+              const empty = stock !== null && stock <= 0;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={activeTool === id}
+                  className={`tool-option${activeTool === id ? ' is-active' : ''}${
+                    empty ? ' is-empty-stock' : ''
+                  }`}
+                  onClick={() => pick(id)}
+                >
+                  <ToolArt id={id} className="tool-option-art" />
+                  <span className="tool-option-meta">
+                    <span className="tool-option-name">{toolName(id)}</span>
+                    <span className="tool-option-hint">
+                      {stock === null
+                        ? toolHint(id)
+                        : stock > 0
+                          ? `${stock} no estoque`
+                          : 'comprar na loja'}
+                    </span>
+                  </span>
+                  <kbd>{toolKey(id)}</kbd>
+                  {activeTool === id ? (
+                    <svg className="tool-option-check" viewBox="0 0 16 16" aria-hidden="true">
+                      <path
+                        d="m3 8.5 3.2 3.2L13 5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        className="seed-strip"
+        role="group"
+        aria-label="Sementes — role para o lado para ver todas"
+        tabIndex={0}
+        onWheel={handleWheel}
       >
-        <span className="tool-art">
-          <WateringCan />
-        </span>
-        <span className="tool-meta">
-          <span className="tool-name">Regar</span>
-          <span className="tool-hint">clique na terra</span>
-        </span>
-        <kbd>W</kbd>
-      </button>
-
-      {FERTILIZER_ORDER.map((id) => {
-        const fertilizer = FERTILIZERS[id];
-        const stock = fertilizerStock[id];
-        const selected = tool === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            className={`tool-card tool-fert${selected ? ' is-active' : ''}${
-              stock <= 0 ? ' is-empty-stock' : ''
-            }`}
-            onClick={() => (stock > 0 ? onSelect(id) : onOpenShop())}
-            aria-pressed={selected}
-            title={
-              stock > 0
-                ? `${fertilizer.name} (${fertilizer.key}) — ${fertilizer.description}`
-                : `${fertilizer.name} esgotado. Compre na loja.`
-            }
-          >
-            <span className={`tool-art tool-art-${id}`}>
-              <FertilizerIcon id={id} className="fert-icon" />
-            </span>
-            <span className="tool-meta">
-              <span className="tool-name">{fertilizer.name}</span>
-              <span className="tool-hint">
-                {stock > 0 ? 'antes da semente' : 'comprar na loja'}
-              </span>
-            </span>
-            <span className="tool-count" aria-label={`${stock} no estoque`}>
-              {stock}
-            </span>
-            <kbd>{fertilizer.key}</kbd>
-          </button>
-        );
-      })}
-
-      <div className="seed-strip" role="group" aria-label="Sementes">
         {unlocked.map((id) => {
           const species = SPECIES[id];
           const selected = tool === id;
