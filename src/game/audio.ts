@@ -137,7 +137,7 @@ class AudioEngine {
     if (!ctx) return;
 
     const bus = ctx.createGain();
-    bus.gain.value = this.night ? 0.34 : 0.5;
+    bus.gain.value = this.night ? 1 : 2;
     bus.connect(master);
 
     const warmth = ctx.createBiquadFilter();
@@ -150,9 +150,9 @@ class AudioEngine {
     const delay = ctx.createDelay(1.2);
     delay.delayTime.value = 0.44;
     const feedback = ctx.createGain();
-    feedback.gain.value = 0.26;
+    feedback.gain.value = 0.30;
     const wet = ctx.createGain();
-    wet.gain.value = 0.32;
+    wet.gain.value = 0.42;
     bus.connect(delay);
     delay.connect(feedback);
     feedback.connect(delay);

@@ -131,6 +131,25 @@ export function coopProduction(coop: CoopState): number {
   return Math.floor((coop.chickens * 60) / LAY_SECONDS);
 }
 
+/** 0 → 1 do próximo ovo; 1 quando o ninho está cheio. */
+export function coopLayRatio(coop: CoopState): number {
+  if (coop.eggs >= coopTier(coop).eggs) return 1;
+  if (coop.chickens <= 0) return 0;
+  return Math.min(1, Math.max(0, coop.layProgress / LAY_SECONDS));
+}
+
+/** Segundos até o próximo ovo, considerando todas as galinhas. */
+export function coopNextEggSeconds(coop: CoopState): number {
+  if (coop.chickens <= 0 || coop.eggs >= coopTier(coop).eggs) return 0;
+  return Math.max(0, LAY_SECONDS - coop.layProgress) / coop.chickens;
+}
+
+/** 0 → 1 do crescimento de um pintinho. */
+export function chickRatio(chick: CoopChick, now = Date.now()): number {
+  const left = Math.max(0, chick.readyAt - now) / 1000;
+  return Math.min(1, Math.max(0, 1 - left / CHICK_SECONDS));
+}
+
 export function chickSecondsLeft(chick: CoopChick, now = Date.now()): number {
   return Math.max(0, (chick.readyAt - now) / 1000);
 }
