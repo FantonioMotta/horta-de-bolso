@@ -13,6 +13,17 @@ import {
   type SpeciesId,
 } from './data';
 import {
+  COOP_TIERS,
+  LAY_SECONDS,
+  MAX_CHICKS,
+  createInitialCoop,
+  type AnimalKind,
+  type CoopChick,
+  type CoopState,
+  type CoopStats,
+  type ScreenId,
+} from './coop';
+import {
   createEmptyInventory,
   createInitialState,
   tick,
@@ -29,7 +40,7 @@ const MAX_PLOTS = PLOT_TIERS[PLOT_TIERS.length - 1].plots;
 
 export interface SaveFile {
   app: typeof EXPORT_APP;
-  v: 2;
+  v: 3;
   exportedAt: number;
   state: GameState;
 }
@@ -42,6 +53,8 @@ export interface OfflineReport {
   thirsty: number;
   orders: number;
   expired: number;
+  coopEggs: number;
+  coopChicks: number;
 }
 
 function isValidSpecies(value: unknown): value is SpeciesId {
@@ -82,10 +95,75 @@ function sanitizePlant(raw: RawPlant): PlantState | null {
   };
 }
 
+function isValidAnimalKind(value: unknown): value is AnimalKind {
+  return value === 'chicken' || value === 'rooster';
+}
+
+function sanitizeCoop(raw: unknown): CoopState {
+  const base = createInitialCoop();
+  if (!raw || typeof raw !== 'object') return base;
+
+  const data = raw as Partial<CoopState>;
+  const tier = Number.isFinite(data.tier)
+    ? Math.min(COOP_TIERS.length - 1, Math.max(0, Math.floor(data.tier as number)))
+    : 0;
+  const caps = COOP_TIERS[tier];
+
+  const chickens = Math.min(
+    caps.animals,
+    Math.max(0, Math.floor(Number(data.chickens) || 0))
+  );
+  const roosters = Math.min(
+    Math.max(0, caps.animals - chickens),
+    Math.max(0, Math.floor(Number(data.roosters) || 0))
+  );
+
+  const chicks: CoopChick[] = [];
+  if (Array.isArray(data.chicks)) {
+    for (const item of data.chicks) {
+      if (!item || typeof item !== 'object') continue;
+      const rawChick = item as Partial<CoopChick>;
+      if (!isValidAnimalKind(rawChick.kind) || !Number.isFinite(rawChick.readyAt)) continue;
+      const id = Number.isFinite(rawChick.id)
+        ? Math.max(1, Math.floor(rawChick.id as number))
+        : chicks.length + 1;
+      if (chicks.some((chick) => chick.id === id)) continue;
+      chicks.push({ id, kind: rawChick.kind, readyAt: rawChick.readyAt as number });
+      if (chicks.length >= MAX_CHICKS) break;
+    }
+  }
+
+  const eggs = Math.min(caps.eggs, Math.max(0, Math.floor(Number(data.eggs) || 0)));
+  const layProgress = Math.min(
+    LAY_SECONDS,
+    Math.max(0, Number.isFinite(data.layProgress) ? (data.layProgress as number) : 0)
+  );
+
+  const rawStats = (data.stats ?? {}) as Partial<CoopStats>;
+  const stat = (value: unknown) => Math.max(0, Math.floor(Number(value) || 0));
+  const stats: CoopStats = {
+    eggsLaid: stat(rawStats.eggsLaid),
+    eggsSold: stat(rawStats.eggsSold),
+    chicksHatched: stat(rawStats.chicksHatched),
+    animalsBought: stat(rawStats.animalsBought),
+    animalsSold: stat(rawStats.animalsSold),
+    earned: stat(rawStats.earned),
+    spent: stat(rawStats.spent),
+  };
+
+  const highestChick = chicks.reduce((max, chick) => Math.max(max, chick.id), 0);
+  const seq = Math.max(
+    highestChick + 1,
+    Number.isFinite(data.seq) ? Math.max(1, Math.floor(data.seq as number)) : 1
+  );
+
+  return { tier, chickens, roosters, chicks, eggs, layProgress, seq, stats };
+}
+
 function sanitize(raw: unknown): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
   const data = raw as Omit<Partial<GameState>, 'v'> & { v?: number };
-  if (data.v !== 1 && data.v !== 2) return null;
+  if (data.v !== 1 && data.v !== 2 && data.v !== 3) return null;
 
   const rawPlots = data.plots as unknown as RawPlot[];
   const plots: PlotState[] = Array.isArray(rawPlots)
@@ -172,7 +250,7 @@ function sanitize(raw: unknown): GameState | null {
       : DEFAULT_GARDEN_NAME;
 
   return {
-    v: 2,
+    v: 3,
     coins: Number.isFinite(data.coins) ? Math.max(0, Math.floor(data.coins as number)) : 0,
     gardenName: name,
     plots,
@@ -187,6 +265,8 @@ function sanitize(raw: unknown): GameState | null {
       ? (data.nextOrderAt as number)
       : now + ORDER_LIMITS.firstDelaySeconds * 1000,
     unlocked,
+    coop: sanitizeCoop(data.coop),
+    screen: (data.screen === 'coop' ? 'coop' : 'garden') as ScreenId,
     stats: {
       harvested: Math.max(0, Math.floor(Number(stats.harvested) || 0)),
       earned: Math.max(0, Math.floor(Number(stats.earned) || 0)),
@@ -230,6 +310,9 @@ export function loadGame(now = Date.now()): { state: GameState; offline: Offline
 
   const expired = beforeOrders.filter((order) => order.deadline <= now).length;
 
+  const coopEggs = Math.max(0, state.coop.stats.eggsLaid - saved.coop.stats.eggsLaid);
+  const coopChicks = Math.max(0, saved.coop.chicks.length - state.coop.chicks.length);
+
   const offline: OfflineReport | null =
     elapsed > 45
       ? {
@@ -239,6 +322,8 @@ export function loadGame(now = Date.now()): { state: GameState; offline: Offline
           thirsty,
           orders: state.orders.length,
           expired,
+          coopEggs,
+          coopChicks,
         }
       : null;
 
@@ -265,7 +350,7 @@ export function clearSave(): void {
 export function encodeSave(state: GameState): string {
   const file: SaveFile = {
     app: EXPORT_APP,
-    v: 2,
+    v: 3,
     exportedAt: Date.now(),
     state,
   };

@@ -18,6 +18,24 @@ import {
   type SpeciesId,
 } from './data';
 
+import {
+  ANIMALS,
+  CHICK_PRICE,
+  CHICK_SECONDS,
+  EGG_PRICE,
+  HATCH_EGG_COST,
+  MAX_CHICKS,
+  advanceCoop,
+  coopAnimalTotal,
+  coopTier,
+  createInitialCoop,
+  nextCoopTier,
+  type AnimalKind,
+  type CoopChick,
+  type CoopState,
+  type ScreenId,
+} from './coop';
+
 export interface PlantState {
   species: SpeciesId;
   /** 0 → 1 */
@@ -57,7 +75,7 @@ export interface GameStats {
 }
 
 export interface GameState {
-  v: 2;
+  v: 3;
   coins: number;
   gardenName: string;
   plots: PlotState[];
@@ -68,6 +86,9 @@ export interface GameState {
   orderSeq: number;
   nextOrderAt: number;
   unlocked: SpeciesId[];
+  coop: CoopState;
+  /** tela que estava aberta por último */
+  screen: ScreenId;
   stats: GameStats;
   introSeen: boolean;
   muted: boolean;
@@ -87,6 +108,12 @@ export type GameEvent =
   | { type: 'fertilizer-bought'; fertilizer: FertilizerId; stock: number }
   | { type: 'rename'; name: string }
   | { type: 'order-filled'; species: SpeciesId; quantity: number; coins: number }
+  | { type: 'coop-buy'; kind: AnimalKind }
+  | { type: 'coop-sell'; kind: AnimalKind; coins: number }
+  | { type: 'eggs-sold'; quantity: number; coins: number }
+  | { type: 'egg-hatched' }
+  | { type: 'chick-sold'; coins: number }
+  | { type: 'coop-expand'; tier: number; animals: number; eggs: number }
   | {
       type: 'error';
       reason:
@@ -102,7 +129,11 @@ export type GameEvent =
         | 'fertilizer'
         | 'fertilized'
         | 'planted'
-        | 'order';
+        | 'order'
+        | 'space'
+        | 'rooster'
+        | 'eggs'
+        | 'chicks';
     };
 
 export interface ActionResult {
@@ -119,7 +150,7 @@ export function createEmptyInventory(): Inventory {
 
 export function createInitialState(now = Date.now()): GameState {
   return {
-    v: 2,
+    v: 3,
     coins: START_COINS,
     gardenName: DEFAULT_GARDEN_NAME,
     plots: Array.from({ length: START_PLOTS }, () => ({
@@ -134,6 +165,8 @@ export function createInitialState(now = Date.now()): GameState {
     orderSeq: 1,
     nextOrderAt: now + ORDER_LIMITS.firstDelaySeconds * 1000,
     unlocked: ['alface'],
+    coop: createInitialCoop(),
+    screen: 'garden',
     stats: { harvested: 0, earned: 0, planted: 0, watered: 0, sold: 0, orders: 0 },
     introSeen: false,
     muted: false,
@@ -223,12 +256,15 @@ export function tick(state: GameState, now: number): GameState {
     nextOrderAt = now + ORDER_LIMITS.waitWhenFullSeconds * 1000;
   }
 
+  const coopAdvance = advanceCoop(state.coop, dt, now);
+
   return {
     ...state,
     plots: changed ? plots : state.plots,
     orders: ordersChanged ? orders : state.orders,
     orderSeq,
     nextOrderAt,
+    coop: coopAdvance.coop,
     lastTick: now,
   };
 }
@@ -493,6 +529,168 @@ export function toggleMute(state: GameState): GameState {
 
 export function markIntroSeen(state: GameState): GameState {
   return { ...state, introSeen: true };
+}
+
+/* --------------------------- Galinheiro --------------------------- */
+
+export function setScreen(state: GameState, screen: ScreenId): GameState {
+  return state.screen === screen ? state : { ...state, screen };
+}
+
+export function buyCoopAnimal(state: GameState, kind: AnimalKind): ActionResult {
+  const info = ANIMALS[kind];
+  const tier = coopTier(state.coop);
+  if (state.coins < info.price) return { state, event: { type: 'error', reason: 'coins' } };
+  if (coopAnimalTotal(state.coop) >= tier.animals)
+    return { state, event: { type: 'error', reason: 'space' } };
+
+  return {
+    state: {
+      ...state,
+      coins: state.coins - info.price,
+      coop: {
+        ...state.coop,
+        chickens: state.coop.chickens + (kind === 'chicken' ? 1 : 0),
+        roosters: state.coop.roosters + (kind === 'rooster' ? 1 : 0),
+        stats: {
+          ...state.coop.stats,
+          animalsBought: state.coop.stats.animalsBought + 1,
+          spent: state.coop.stats.spent + info.price,
+        },
+      },
+    },
+    event: { type: 'coop-buy', kind },
+  };
+}
+
+export function sellCoopAnimal(state: GameState, kind: AnimalKind): ActionResult {
+  const info = ANIMALS[kind];
+  const count = kind === 'chicken' ? state.coop.chickens : state.coop.roosters;
+  if (count <= 0) return { state, event: { type: 'error', reason: 'nothing' } };
+
+  const coins = info.sellPrice;
+  return {
+    state: {
+      ...state,
+      coins: state.coins + coins,
+      coop: {
+        ...state.coop,
+        chickens: state.coop.chickens - (kind === 'chicken' ? 1 : 0),
+        roosters: state.coop.roosters - (kind === 'rooster' ? 1 : 0),
+        stats: {
+          ...state.coop.stats,
+          animalsSold: state.coop.stats.animalsSold + 1,
+          earned: state.coop.stats.earned + coins,
+        },
+      },
+    },
+    event: { type: 'coop-sell', kind, coins },
+  };
+}
+
+export function sellEggs(state: GameState): ActionResult {
+  const quantity = state.coop.eggs;
+  if (quantity <= 0) return { state, event: { type: 'error', reason: 'nothing' } };
+
+  const coins = quantity * EGG_PRICE;
+  return {
+    state: {
+      ...state,
+      coins: state.coins + coins,
+      coop: {
+        ...state.coop,
+        eggs: 0,
+        stats: {
+          ...state.coop.stats,
+          eggsSold: state.coop.stats.eggsSold + quantity,
+          earned: state.coop.stats.earned + coins,
+        },
+      },
+    },
+    event: { type: 'eggs-sold', quantity, coins },
+  };
+}
+
+export function hatchEggs(state: GameState, now = Date.now()): ActionResult {
+  if (state.coop.roosters <= 0) return { state, event: { type: 'error', reason: 'rooster' } };
+  if (state.coop.eggs < HATCH_EGG_COST)
+    return { state, event: { type: 'error', reason: 'eggs' } };
+  if (state.coop.chicks.length >= MAX_CHICKS)
+    return { state, event: { type: 'error', reason: 'chicks' } };
+
+  // 32% de chance de nascer galo — o suficiente para o galinheiro se renovar.
+  const kind: AnimalKind = Math.random() < 0.32 ? 'rooster' : 'chicken';
+  const chick: CoopChick = {
+    id: state.coop.seq,
+    kind,
+    readyAt: now + CHICK_SECONDS * 1000,
+  };
+
+  return {
+    state: {
+      ...state,
+      coop: {
+        ...state.coop,
+        eggs: state.coop.eggs - HATCH_EGG_COST,
+        chicks: [...state.coop.chicks, chick],
+        seq: state.coop.seq + 1,
+        stats: {
+          ...state.coop.stats,
+          chicksHatched: state.coop.stats.chicksHatched + 1,
+        },
+      },
+    },
+    event: { type: 'egg-hatched' },
+  };
+}
+
+export function sellChick(state: GameState, chickId: number): ActionResult {
+  const chick = state.coop.chicks.find((item) => item.id === chickId);
+  if (!chick) return { state, event: { type: 'error', reason: 'nothing' } };
+
+  return {
+    state: {
+      ...state,
+      coins: state.coins + CHICK_PRICE,
+      coop: {
+        ...state.coop,
+        chicks: state.coop.chicks.filter((item) => item.id !== chickId),
+        stats: {
+          ...state.coop.stats,
+          animalsSold: state.coop.stats.animalsSold + 1,
+          earned: state.coop.stats.earned + CHICK_PRICE,
+        },
+      },
+    },
+    event: { type: 'chick-sold', coins: CHICK_PRICE },
+  };
+}
+
+export function expandCoop(state: GameState): ActionResult {
+  const tier = nextCoopTier(state.coop);
+  if (!tier) return { state, event: { type: 'error', reason: 'max' } };
+  if (state.coins < tier.cost) return { state, event: { type: 'error', reason: 'coins' } };
+
+  return {
+    state: {
+      ...state,
+      coins: state.coins - tier.cost,
+      coop: {
+        ...state.coop,
+        tier: state.coop.tier + 1,
+        stats: {
+          ...state.coop.stats,
+          spent: state.coop.stats.spent + tier.cost,
+        },
+      },
+    },
+    event: {
+      type: 'coop-expand',
+      tier: state.coop.tier + 1,
+      animals: tier.animals,
+      eggs: tier.eggs,
+    },
+  };
 }
 
 export function inventoryTotal(state: GameState): number {

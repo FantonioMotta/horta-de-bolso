@@ -4,16 +4,23 @@ import { audio } from './audio';
 import {
   applyFertilizer,
   buyCapacity,
+  buyCoopAnimal,
   buyFertilizer,
   createInitialState,
   deliverOrder,
+  expandCoop,
   expandPlots,
   harvestPlot,
+  hatchEggs,
   markIntroSeen,
   plantSeed,
   renameGarden,
   sellAll,
+  sellChick,
+  sellCoopAnimal,
+  sellEggs,
   sellSpecies,
+  setScreen,
   tick,
   toggleMute,
   unlockSpecies,
@@ -22,6 +29,7 @@ import {
   type GameEvent,
   type GameState,
 } from './engine';
+import type { AnimalKind, ScreenId } from './coop';
 import { clearSave, decodeSave, encodeSave, loadGame, saveGame, type OfflineReport } from './storage';
 
 export interface Burst {
@@ -144,6 +152,48 @@ export function useGame() {
             'good'
           );
           break;
+        case 'coop-buy':
+          audio.play('cluck');
+          toast(
+            event.kind === 'chicken'
+              ? 'Uma galinha chegou ao galinheiro!'
+              : 'Um galo chegou ao galinheiro!',
+            'good'
+          );
+          break;
+        case 'coop-sell':
+          audio.play('sell');
+          toast(
+            event.kind === 'chicken'
+              ? `Galinha vendida por ${event.coins} moedas.`
+              : `Galo vendido por ${event.coins} moedas.`,
+            'good'
+          );
+          break;
+        case 'eggs-sold':
+          audio.play('sell');
+          toast(
+            `${event.quantity} ${event.quantity === 1 ? 'ovo vendido' : 'ovos vendidos'} por ${
+              event.coins
+            } moedas.`,
+            'good'
+          );
+          break;
+        case 'egg-hatched':
+          audio.play('chick');
+          toast('Um ovo chocou! O pintinho cresce em 4 minutos.', 'good');
+          break;
+        case 'chick-sold':
+          audio.play('coin');
+          toast(`Pintinho vendido por ${event.coins} moedas.`, 'good');
+          break;
+        case 'coop-expand':
+          audio.play('expand');
+          toast(
+            `Galinheiro ampliado: ${event.animals} moradores e ${event.eggs} lugares no ninho.`,
+            'good'
+          );
+          break;
         case 'error':
           audio.play('error');
           if (event.reason === 'coins') toast('Moedas insuficientes.', 'bad');
@@ -153,7 +203,7 @@ export function useGame() {
           if (event.reason === 'busy') toast('Esse canteiro já está ocupado.', 'info');
           if (event.reason === 'max') toast('Isso já está no tamanho máximo.', 'info');
           if (event.reason === 'full') toast('Sacola cheia. Venda alguma colheita primeiro.', 'bad');
-          if (event.reason === 'nothing') toast('Não há nada para vender na sacola.', 'info');
+          if (event.reason === 'nothing') toast('Não há nada para vender.', 'info');
           if (event.reason === 'stock') toast('Itens insuficientes na sacola.', 'info');
           if (event.reason === 'fertilizer')
             toast('Sem fertilizante no estoque. Compre na loja.', 'info');
@@ -162,6 +212,13 @@ export function useGame() {
           if (event.reason === 'planted')
             toast('O fertilizante vai na terra antes da semente.', 'info');
           if (event.reason === 'order') toast('Esse pedido já não está disponível.', 'info');
+          if (event.reason === 'space')
+            toast('O galinheiro está cheio. Melhore o espaço para receber mais animais.', 'bad');
+          if (event.reason === 'rooster')
+            toast('Você precisa de um galo para chocar os ovos.', 'info');
+          if (event.reason === 'eggs') toast('São necessários 3 ovos para chocar.', 'info');
+          if (event.reason === 'chicks')
+            toast('Pintinhos demais crescendo. Espere ou venda algum.', 'info');
           break;
         default:
           break;
@@ -206,6 +263,30 @@ export function useGame() {
             ? `${expired.length} pedidos expiraram sem entrega.`
             : 'Um pedido expirou sem entrega.',
           'bad'
+        );
+      }
+
+      const laid = next.coop.eggs - current.coop.eggs;
+      if (laid > 0) {
+        audio.play('cluck');
+        toast(
+          laid === 1 ? 'Uma galinha pôs um ovo no ninho.' : `${laid} ovos novos no ninho.`,
+          'good'
+        );
+      }
+
+      const matured = current.coop.chicks.filter(
+        (chick) => !next.coop.chicks.some((item) => item.id === chick.id)
+      );
+      if (matured.length > 0) {
+        audio.play('chick');
+        toast(
+          matured.length === 1
+            ? matured[0].kind === 'rooster'
+              ? 'Um pintinho cresceu e virou galo!'
+              : 'Um pintinho cresceu e virou galinha!'
+            : `${matured.length} pintinhos cresceram e já moram no galinheiro.`,
+          'good'
         );
       }
 
@@ -263,6 +344,13 @@ export function useGame() {
     rename: (name: string) => run((s) => renameGarden(s, name)),
     unlock: (species: SpeciesId) => run((s) => unlockSpecies(s, species)),
     expand: () => run((s) => expandPlots(s)),
+    setScreen: (screen: ScreenId) => run((s) => ({ state: setScreen(s, screen) })),
+    buyCoopAnimal: (kind: AnimalKind) => run((s) => buyCoopAnimal(s, kind)),
+    sellCoopAnimal: (kind: AnimalKind) => run((s) => sellCoopAnimal(s, kind)),
+    sellEggs: () => run((s) => sellEggs(s)),
+    hatchEggs: () => run((s) => hatchEggs(s)),
+    sellChick: (id: number) => run((s) => sellChick(s, id)),
+    expandCoop: () => run((s) => expandCoop(s)),
     toggleMute: () => run((s) => ({ state: toggleMute(s) })),
     markIntroSeen: () => run((s) => ({ state: markIntroSeen(s) })),
     exportSave: () => {

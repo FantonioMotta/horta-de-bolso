@@ -8,7 +8,9 @@ type Sfx =
   | 'expand'
   | 'sell'
   | 'fertilize'
-  | 'order';
+  | 'order'
+  | 'cluck'
+  | 'chick';
 
 /**
  * Áudio inteiramente sintetizado (sem arquivos): vento, pássaros, grilos e
@@ -406,6 +408,15 @@ class AudioEngine {
         [784, 988, 1175].forEach((note, index) => {
           this.tone(note, 0.2, { type: 'sine', gain: 0.065, delay: index * 0.075 });
         });
+        break;
+      case 'cluck':
+        this.tone(560, 0.07, { type: 'triangle', gain: 0.055, to: 420 });
+        this.tone(640, 0.06, { type: 'triangle', gain: 0.045, delay: 0.1, to: 470 });
+        this.tone(520, 0.08, { type: 'triangle', gain: 0.04, delay: 0.2, to: 390 });
+        break;
+      case 'chick':
+        this.tone(1350, 0.08, { type: 'sine', gain: 0.045, to: 1850 });
+        this.tone(1500, 0.09, { type: 'sine', gain: 0.038, delay: 0.11, to: 2000 });
         break;
       case 'error':
         this.tone(160, 0.1, { type: 'square', gain: 0.035, to: 120 });

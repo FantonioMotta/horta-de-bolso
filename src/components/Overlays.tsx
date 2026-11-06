@@ -64,7 +64,8 @@ export function Intro({ open, onStart }: { open: boolean; onStart: () => void })
         <h2 id="intro-title">Uma horta para o canto da tela</h2>
         <p className="intro-lead">
           Plante, regue de vez em quando e colha. A horta cresce em tempo real — enquanto você
-          trabalha, lê ou faz outra coisa.
+          trabalha, lê ou faz outra coisa. No galinheiro, galinhas põem ovos e pintinhos viram novos
+          moradores.
         </p>
 
         <ol className="intro-steps">
@@ -94,10 +95,17 @@ export function Intro({ open, onStart }: { open: boolean; onStart: () => void })
               sementes, fertilizantes e canteiros.
             </span>
           </li>
+          <li>
+            <span className="step-icon">5</span>
+            <span>
+              <strong>Abra o galinheiro</strong> no topo da cena (ou tecle G): compre galinhas,
+              recolha ovos e choque pintinhos para vender.
+            </span>
+          </li>
         </ol>
 
         <button type="button" className="primary-button" onClick={onStart}>
-          Começar a plantar
+          Começar a cuidar
         </button>
         <p className="intro-foot">Dica: deixe esta janela num canto, pequena. Ela cuida do resto.</p>
       </div>
@@ -160,15 +168,31 @@ export function OfflineNotice({
               {report.orders === 1 ? 'pedido espera' : 'pedidos esperam'} na caderneta.
             </li>
           ) : null}
+          {report.coopEggs > 0 ? (
+            <li>
+              <strong>{report.coopEggs}</strong>{' '}
+              {report.coopEggs === 1 ? 'ovo novo apareceu' : 'ovos novos apareceram'} no ninho.
+            </li>
+          ) : null}
+          {report.coopChicks > 0 ? (
+            <li>
+              <strong>{report.coopChicks}</strong>{' '}
+              {report.coopChicks === 1
+                ? 'pintinho cresceu e já mora no galinheiro.'
+                : 'pintinhos cresceram e já moram no galinheiro.'}
+            </li>
+          ) : null}
           {report.matured === 0 &&
           report.growing === 0 &&
           report.orders === 0 &&
-          report.expired === 0 ? (
+          report.expired === 0 &&
+          report.coopEggs === 0 &&
+          report.coopChicks === 0 ? (
             <li>A terra descansou em silêncio.</li>
           ) : null}
         </ul>
         <button type="button" className="primary-button" onClick={onClose}>
-          Ver a horta
+          Continuar
         </button>
       </div>
     </div>

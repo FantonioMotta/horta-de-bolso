@@ -8,7 +8,7 @@
 
 > Uma horta idle em pt-BR que cresce enquanto você faz outra coisa.
 
-Plante, regue, colha para a sacola, venda a produção, cumpra pedidos da feira e use as moedas para liberar sementes, fertilizantes e mais espaço.
+Plante, regue, colha para a sacola, venda a produção, cumpra pedidos da feira e use as moedas para liberar sementes, fertilizantes e mais espaço. No galinheiro, galinhas põem ovos, pintinhos crescem e novos moradores podem ser comprados ou vendidos.
 
 **Jogue agora em [horta-de-bolso.pages.dev](https://horta-de-bolso.pages.dev)** — instale como app e continue offline.
 
@@ -62,11 +62,12 @@ O manifesto usa `display: "window"`, então o app abre em uma janela normal do s
 - **Vender:** abra a **Sacola** no topo e venda uma espécie ou tudo de uma vez. A sacola tem limite de espaço.
 - **Fertilizar:** compre Húmus ou Cobertura na loja, selecione o adubo na bandeja e clique num canteiro vazio, antes de plantar. Cada germinação aceita só um fertilizante.
 - **Pedidos:** abra a **Caderneta de pedidos** no topo. Os pedidos pedem uma quantidade de uma espécie, pagam um extra e têm prazo real para entrega; use os itens da sacola.
+- **Galinheiro:** use os botões **Horta / Galinheiro** no topo da cena (ou tecle `G`) para trocar de tela. No galinheiro, compre galinhas e galos, recolha e venda ovos, choque pintinhos e amplie o espaço.
 - **Loja:** libere espécies novas, compre fertilizantes e amplie a sacola e os canteiros.
 - **Nome:** clique no lápis ao lado do nome para renomear a horta. O nome aparece também na plaquinha do canteiro.
 - **Backup:** na loja, use **Exportar save** para baixar um arquivo `.json` e **Importar save** para restaurar o progresso em outro navegador.
 - **Som:** o botão no topo liga e desliga o áudio. A escolha fica salva.
-- **Atalhos:** `1`–`6` selecionam sementes; `7` e `8` selecionam fertilizantes; `W` seleciona o regador; `L`, `I` e `P` abrem a loja, a sacola e os pedidos; `Esc` fecha painéis e diálogos.
+- **Atalhos:** `1`–`6` selecionam sementes; `7` e `8` selecionam fertilizantes; `W` seleciona o regador; `G` alterna entre a horta e o galinheiro; `H` volta para a horta; `L`, `I` e `P` abrem a loja, a sacola e os pedidos; `Esc` fecha painéis e diálogos.
 
 ### Espécies
 
@@ -104,13 +105,29 @@ O adubo é aplicado em um canteiro vazio antes da semente, gasta uma dose do est
 
 A caderneta mantém até 3 pedidos ativos. Cada pedido pede uma quantidade de uma espécie liberada, oferece de 30% a 70% a mais do que a venda direta e tem prazo de 3 a 5 minutos e meio. O primeiro pedido chega cerca de 30 segundos depois de começar, e novos pedidos aparecem com o tempo — inclusive com a janela fechada. Pedidos vencidos saem da caderneta sem pagar nada.
 
+### Galinheiro
+
+A horta e o galinheiro são telas separadas, alternadas pelos botões no topo da cena (ou por `G` / `H`). O galinheiro começa vazio, com espaço para 4 moradores e 6 ovos no ninho.
+
+| Morador | Compra | Venda | O que faz |
+| --- | ---: | ---: | --- |
+| Galinha | 55 | 70 | põe um ovo a cada 2 min e meio |
+| Galo | 85 | 110 | necessário para chocar os ovos |
+
+- **Ovos:** cada ovo vale 15 moedas e pode ser vendido direto na bandeja do galinheiro ou no painel. O ninho guarda no máximo a capacidade do espaço atual.
+- **Chocar:** com pelo menos um galo e 3 ovos no ninho, é possível chocar um pintinho. Ele leva 4 minutos para virar adulto e tem 32% de chance de nascer galo. Até 6 pintinhos podem crescer ao mesmo tempo.
+- **Pintinhos:** podem ser vendidos ainda pequenos por 40 moedas ou esperar para reforçar o galinheiro.
+- **Expansão:** o espaço cresce para 6 moradores e 10 ovos por 220 moedas, depois 9 e 16 por 780 e, por fim, 14 e 24 por 2.200.
+- **Tempo offline:** a postura e o crescimento dos pintinhos continuam com a janela fechada; ao voltar, o resumo informa os ovos novos e os pintinhos que cresceram.
+
 ## Progresso, backup e tempo offline
 
-- O jogo salva automaticamente no `localStorage`, na chave `orta.save.v1`. O formato atual é `v: 2`, com migração automática de saves `v: 1`.
-- Ao voltar, o tempo fora do jogo é aplicado ao crescimento e à umidade, e um resumo mostra o que amadureceu, o que ainda está crescendo, o que ficou com sede e o que aconteceu com os pedidos.
+- O jogo salva automaticamente no `localStorage`, na chave `orta.save.v1`. O formato atual é `v: 3`, com migração automática de saves `v: 1` e `v: 2` (saves antigos ganham o galinheiro padrão e abrem na horta).
+- A tela ativa também fica salva: ao voltar, o jogo reabre na horta ou no galinheiro, conforme onde você estava.
+- Ao voltar, o tempo fora do jogo é aplicado ao crescimento e à umidade da horta, à postura das galinhas e ao crescimento dos pintinhos. Um resumo mostra o que amadureceu, o que ainda está crescendo, o que ficou com sede, os pedidos e as novidades do galinheiro.
 - O relógio do jogo usa o horário real do sistema para o ciclo de dia e noite.
 - Limpar os dados do site apaga a horta; não há conta nem servidor.
-- **Exportar save** baixa um arquivo `horta-de-bolso-save-AAAA-MM-DD.json` com uma fotografia do progresso. **Importar save** valida o arquivo, pede confirmação e substitui a horta atual. O backup também aceita um save antigo `v: 1`.
+- **Exportar save** baixa um arquivo `horta-de-bolso-save-AAAA-MM-DD.json` com uma fotografia do progresso. **Importar save** valida o arquivo, pede confirmação e substitui a horta atual. O backup também aceita um save antigo `v: 1` ou `v: 2`.
 - O arquivo importado não aplica o tempo em que ficou guardado: plantas, moedas, sacola e pedidos voltam como estavam no momento da exportação. Pedidos já vencidos são descartados.
 - Ao importar, o progresso é gravado imediatamente no navegador atual.
 
@@ -145,8 +162,8 @@ Em desenvolvimento, o motor de áudio fica exposto em `window.__ortaAudio` para 
 
 ```text
 src/
-  components/   cena, horta, plantas, HUD, bandeja, loja e diálogos
-  game/         dados de economia, motor, save, áudio e ciclo de luz
+  components/   cena, horta, galinheiro, plantas, HUD, bandeja, loja e diálogos
+  game/         dados de economia, motor, save, áudio, ciclo de luz e galinheiro
   styles.css    layout, animações e arte em CSS
 public/
   manifest.webmanifest
@@ -161,4 +178,4 @@ A paleta e a atmosfera seguem o material de referência “Jardim Encantado”: 
 
 ## Compatibilidade
 
-Feito para navegadores modernos com suporte a Web Audio, `localStorage`, `@property` e service workers (Chrome, Edge, Firefox e Safari recentes). Em janelas estreitas, a bandeja de sementes rola na horizontal e o canteiro se ajusta à largura disponível.
+Feito para navegadores modernos com suporte a Web Audio, `localStorage`, `@property` e service workers (Chrome, Edge, Firefox e Safari recentes). Em janelas estreitas, as bandejas de sementes e do galinheiro rolam na horizontal e o canteiro se ajusta à largura disponível.
